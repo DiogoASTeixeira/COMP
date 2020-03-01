@@ -47,10 +47,14 @@ int eval(SimpleNode node) {
  TOKEN:
  {
      < INTEGER: (["0"-"9"])+ >
+     |  < CROSS: "+" >
      |  < MINUS: "-" >
+     |  < STAR: "*" >
+     |  < DASH: "/" >
      |  < LP: "(" >
      |  < RP: ")" >
      |  < LF: "\n" >
+     |  < MINUS_LP: "-(" >
  }
  SimpleNode Expression(): {}
  {
@@ -60,16 +64,16 @@ int eval(SimpleNode node) {
  void Expr1(int sign) #void: {}
  {
      Expr2(sign) [
-         ( "+" Expr2(sign) #Add(2)
-         | "-" Expr2(sign) #Sub(2))
+         ( <CROSS> Expr2(sign) #Add(2)
+         | <MINUS> Expr2(sign) #Sub(2))
     ]
  }
 
  void Expr2(int sign) #void: {}
  {
      Expr3(sign)
-         [ "*" Expr3(1) #Mul(2)
-         | "/" Expr3(1) #Div(2)
+         [ <STAR> Expr3(1) #Mul(2)
+         | <DASH> Expr3(1) #Div(2)
          ]     //(..)? equivalent to [..]
  }
 
@@ -79,7 +83,7 @@ int eval(SimpleNode node) {
      {
         jjtThis.val = sign * Integer.parseInt(t.image);
      } #Term
-     | "-" Expr3(-1)
-     | "(" Expr1(1) ")"
-     | "-(" Expr1(-1) ")"
+     | <MINUS> Expr3(-1)
+     | <LP> Expr1(1) <RP>
+     | <MINUS_LP> Expr1(-1) <RP>
  }

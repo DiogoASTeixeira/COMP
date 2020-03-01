@@ -11,13 +11,21 @@ public interface CalculatorConstants {
   /** RegularExpression Id. */
   int INTEGER = 4;
   /** RegularExpression Id. */
-  int MINUS = 5;
+  int CROSS = 5;
   /** RegularExpression Id. */
-  int LP = 6;
+  int MINUS = 6;
   /** RegularExpression Id. */
-  int RP = 7;
+  int STAR = 7;
   /** RegularExpression Id. */
-  int LF = 8;
+  int DASH = 8;
+  /** RegularExpression Id. */
+  int LP = 9;
+  /** RegularExpression Id. */
+  int RP = 10;
+  /** RegularExpression Id. */
+  int LF = 11;
+  /** RegularExpression Id. */
+  int MINUS_LP = 12;
 
   /** Lexical state. */
   int DEFAULT = 0;
@@ -29,13 +37,13 @@ public interface CalculatorConstants {
     "\"\\r\"",
     "\"\\t\"",
     "<INTEGER>",
+    "\"+\"",
     "\"-\"",
+    "\"*\"",
+    "\"/\"",
     "\"(\"",
     "\")\"",
     "\"\\n\"",
-    "\"+\"",
-    "\"*\"",
-    "\"/\"",
     "\"-(\"",
   };
 
