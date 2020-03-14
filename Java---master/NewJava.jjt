@@ -1,0 +1,395 @@
+options {
+  LOOKAHEAD=2;
+}
+PARSER_BEGIN(NewJava)
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.io.*;
+import java.util.ArrayList;
+
+public class NewJava
+{
+  public static int errorCount = 10;
+  public static SymbolTable table;
+  public static String filePath;
+  public static SimpleNode root;
+
+  public NewJava(SymbolTable table, String path) {
+    this.filePath = path;
+    this.table = table;
+  }
+
+  public SymbolTable start() throws ParseException{
+    NewJava myJava = null;
+
+    System.out.println("Path: " + filePath);
+
+    String fileContents = fileToString(filePath);
+    ByteArrayInputStream stream = new ByteArrayInputStream(fileContents.getBytes());
+
+    if (table == null) {
+      table = new SymbolTable(filePath);
+      myJava = new NewJava(stream);
+    } else {
+      table= new SymbolTable(filePath);
+      myJava.ReInit(stream);
+    }
+
+
+    NewJava.root = myJava.Program();
+
+    NewJava.root.dump("");
+
+    //contrutor  symbol table
+
+    table.startSymbolTable(NewJava.root);
+
+    //Jasmin Generator
+    //JasminParser jasminParser = new JasminParser(filePath,root,table);
+    //jasminParser.generate();
+
+    return table;
+
+
+  }
+
+  private static String fileToString(String filePath)
+  {
+    String content = "";
+
+    try
+    {
+        content = new String ( Files.readAllBytes( Paths.get(filePath) ) );
+    }
+    catch (IOException e)
+    {
+        System.out.println(e.toString());
+    }
+
+    return content;
+  }
+}
+
+PARSER_END(NewJava)
+SKIP :
+{
+  " " | "\r" | "\t" | "\n" | "\n "
+}
+
+MORE :
+{
+  "//" : IN_SINGLE_LINE_COMMENT
+|
+  <"/**" ~["/"]> { input_stream.backup(1); } : IN_FORMAL_COMMENT
+|
+  "/*" : IN_MULTI_LINE_COMMENT
+}
+
+<IN_SINGLE_LINE_COMMENT>
+SPECIAL_TOKEN :
+{
+  <SINGLE_LINE_COMMENT: "\n" | "\r" | "\r\n" > : DEFAULT
+}
+
+<IN_FORMAL_COMMENT>
+SPECIAL_TOKEN :
+{
+  <FORMAL_COMMENT: "*/" > : DEFAULT
+}
+
+<IN_MULTI_LINE_COMMENT>
+SPECIAL_TOKEN :
+{
+  <MULTI_LINE_COMMENT: "*/" > : DEFAULT
+}
+
+<IN_SINGLE_LINE_COMMENT,IN_FORMAL_COMMENT,IN_MULTI_LINE_COMMENT>
+MORE :
+{
+  < ~[] >
+}
+
+
+TOKEN:
+{
+  < CLASS: "class" >
+  | < EXTENDS: "extends" >
+  | < AND: "&&">
+  | < MINOR: "<">
+  | < OPERATORSLOW: "+" | "-" >
+  | < OPERATORSHIGH: "*" | "/" >
+  | < BRACKETOPEN: "[" >
+  | < BRACKETCLOSE: "]" >
+  | < FULLSTOP: "." >
+  | < COMMA: "," >
+  | < SEMICOLON: ";" >
+  | < NOT: "!" >
+  | < ROUNDBRACKETOPEN: "(" >
+  | < ROUNDBRACKETCLOSED: ")" >
+  | < CURLYBRACKETOPENED: "{" >
+  | < CURLYBRACKETCLOSED: "}" >
+  | < ASSIGN: "=">
+  | < TRUE: "true" >
+  | < FALSE: "false" >
+  | < THIS: "this" >
+  | < NEW: "new" >
+  | < LENGTH: "length" >
+  | < INTARRAY: "int[]" >
+  | < INT: "int" >
+  | < PUBLIC: "public" >
+  | < STATIC: "static" >
+  | < VOID: "void" >
+  | < MAIN: "main" >
+  | < RETURN: "return" >
+  | < BOOLEAN: "boolean" >
+  | < IF: "if">
+  | < ELSE: "else">
+  | < WHILE: "while">
+  | < STRING: "String" >
+  | < INTEGERLITERAL: (["0" - "9"])+ >
+  | < IDENTIFIER: ["A"-"Z","a"-"z","_","$"](["0"-"9","A"-"Z","a"-"z","_","$"])* >
+}
+SimpleNode Program(): {}
+{
+  ClassDeclaration() <EOF> {return jjtThis;}
+}
+
+void ClassDeclaration()#CLASS:  {Token t,ext = new Token();}
+{
+    <CLASS> t=<IDENTIFIER> (<EXTENDS> ext=<IDENTIFIER>{jjtThis.symbol = ext.image;}#EXTENDS)? <CURLYBRACKETOPENED>(VarDeclaration())*(<PUBLIC> (MainDeclaration() | MethodDeclaration()))*<CURLYBRACKETCLOSED> {
+      jjtThis.symbol = t.image;
+      jjtThis.line = t.beginLine;
+      jjtThis.column = t.beginColumn;
+    }
+}
+
+void VarDeclaration()#VAR: {Token t;}
+{
+    Type() t=<IDENTIFIER> <SEMICOLON>{
+      jjtThis.symbol=t.image;
+      jjtThis.line = t.beginLine;
+      jjtThis.column = t.beginColumn;
+    }
+}
+
+void Type()#TYPE: {Token t;}
+{
+    (
+      t=<INTARRAY>
+    | t=<INT>
+    | t=<BOOLEAN>
+    | t=<IDENTIFIER>
+    | t=<VOID>
+    )
+    {
+      jjtThis.symbol = t.image;
+      jjtThis.line = t.beginLine;
+      jjtThis.column = t.beginColumn;
+    }
+}
+
+void MainDeclaration()#MAIN: {}
+{
+    <STATIC> <VOID> <MAIN> <ROUNDBRACKETOPEN> <STRING> <BRACKETOPEN> <BRACKETCLOSE> <IDENTIFIER> <ROUNDBRACKETCLOSED> <CURLYBRACKETOPENED>
+    (VarDeclaration())* (Statement())*
+    <CURLYBRACKETCLOSED>
+}
+
+void MethodDeclaration()#FUNCTION: {Token name,ret; }
+{
+    Type() name=<IDENTIFIER> <ROUNDBRACKETOPEN>
+    Args()
+     <ROUNDBRACKETCLOSED> <CURLYBRACKETOPENED>
+    (VarDeclaration())*(Statement())*
+    <RETURN> Expression() <SEMICOLON> <CURLYBRACKETCLOSED>{
+    }#RETURN(1)
+    {
+      jjtThis.symbol = name.image;
+      jjtThis.line = name.beginLine;
+      jjtThis.column = name.beginColumn;
+    }
+}
+
+void Args()#ARGS:{Token arg1,arg2;}
+{
+  (Type() arg1=<IDENTIFIER>{
+    jjtThis.symbol = arg1.image;
+    jjtThis.line = arg1.beginLine;
+    jjtThis.column = arg1.beginColumn;
+  }#VAR(1) (<COMMA> Type() arg2=<IDENTIFIER>{
+    jjtThis.symbol = arg2.image;
+    jjtThis.line = arg2.beginLine;
+    jjtThis.column = arg2.beginColumn;
+  }#VAR(1))*)?
+}
+
+void Statement()#void:{Token t=new Token();}
+{
+  <CURLYBRACKETOPENED> (Statement())* <CURLYBRACKETCLOSED>
+  | <IF> IfStatement()
+  | <ELSE> ElseStatement()
+  | <WHILE> WhileStatement()
+  | Assign()
+  | Expression() <SEMICOLON>
+}
+
+void Assign() #void: {Token t;}
+{
+  AssignAux() [<ASSIGN> Expression(){}#ASSIGN(2)] <SEMICOLON>
+}
+
+void AssignAux() #VAR: {Token t;}
+{
+  t=<IDENTIFIER> [<BRACKETOPEN>  Expression() <BRACKETCLOSE>{}#ARRINDEX(1)]{
+    jjtThis.symbol = t.image;
+    jjtThis.line = t.beginLine;
+    jjtThis.column = t.beginColumn;
+  }
+}
+
+void IfStatement()#IF:{}
+{
+  <ROUNDBRACKETOPEN> Expression() <ROUNDBRACKETCLOSED> Statement()
+}
+
+void ElseStatement()#ELSE:{}
+{
+ Statement()
+}
+
+void WhileStatement()#WHILE: {Token t;}
+{
+  try {
+    <ROUNDBRACKETOPEN> Expression() <ROUNDBRACKETCLOSED> Statement()
+
+  } catch (ParseException e) {
+    System.out.println(e.currentToken.image);
+
+    if(errorCount > 0){
+      do{
+        t=NewJava.getNextToken();
+      }while(t.image != ")");
+
+      errorCount--;
+
+      Statement();
+    }
+
+  }
+
+}
+
+void Expression()#void: {Token t = new Token();}
+{
+  VarTerm() [Expr2()]
+}
+
+void Expr2()#void: {Token t;}
+{
+
+    t=<AND> VarTerm() [Expr2()]
+      {
+        jjtThis.symbol = t.image;
+        jjtThis.line = t.beginLine;
+        jjtThis.column = t.beginColumn;
+      }#OP2(2)
+    | <BRACKETOPEN> Expression() <BRACKETCLOSE> [Expr2()]
+    | Expr3()[Expr2()]
+}
+
+void Expr3()#void: {Token t;}
+{
+      t=<MINOR>VarTerm()[Expr3()]
+      {
+        jjtThis.symbol = t.image;
+        jjtThis.line = t.beginLine;
+        jjtThis.column = t.beginColumn;
+      }#OP3(2)
+      | Expr4()[Expr3()]
+}
+
+void Expr4()#void: {Token t;}
+{
+     t=<OPERATORSLOW>VarTerm()[Expr4()]
+      {
+        jjtThis.symbol = t.image;
+        jjtThis.line = t.beginLine;
+        jjtThis.column = t.beginColumn;
+      }#OP4(2)
+      | Expr5()[Expr4()]
+}
+
+void Expr5()#void: {Token t;}
+{
+  t=<OPERATORSHIGH>VarTerm()[Expr5()]
+      {
+        jjtThis.symbol = t.image;
+        jjtThis.line = t.beginLine;
+        jjtThis.column = t.beginColumn;
+      }#OP5(2)
+  | Expr6()[Expr5()]
+}
+
+void Expr6()#void: {Token t;}
+{
+  <NOT> VarTerm() [Expr6()]{}#NOT(1)
+  | Expr7()
+}
+
+void Expr7()#void: {Token t;}
+{
+  FullStop(){}#FULLSTOP(2)
+}
+
+void FullStop()#PAREMETER: {Token t;}
+{
+  <FULLSTOP> (t=<LENGTH> |
+  t=<IDENTIFIER> <ROUNDBRACKETOPEN> [Expression()(<COMMA> Expression())*]  <ROUNDBRACKETCLOSED>){
+    jjtThis.symbol = t.image;
+    jjtThis.line = t.beginLine;
+    jjtThis.column = t.beginColumn;
+  }
+}
+
+void VarTerm()#void: {Token t;Token open = new Token();Token close = new Token();}
+{
+    t=<INTEGERLITERAL>
+      {
+        jjtThis.symbol = t.image;
+        jjtThis.line = t.beginLine;
+        jjtThis.column = t.beginColumn;
+      }#VAL
+    | t=<IDENTIFIER> open=<BRACKETOPEN> Expression() close=<BRACKETCLOSE> #ARRINDEX(1)
+      {
+        jjtThis.symbol = t.image;
+        jjtThis.line = t.beginLine;
+        jjtThis.column = t.beginColumn;
+      }#TEXT(1)
+
+    | t=<IDENTIFIER>
+      {
+        jjtThis.symbol = t.image;
+        jjtThis.line = t.beginLine;
+        jjtThis.column = t.beginColumn;
+      }#TEXT
+
+    | <TRUE> #TRUE
+    | <FALSE> #FALSE
+    | <THIS> #THIS
+    | <NEW> (t=<INT> open=<BRACKETOPEN> Expression() close=<BRACKETCLOSE> {
+      jjtThis.symbol = "int[]";
+      jjtThis.line = t.beginLine;
+      jjtThis.column = t.beginColumn;
+    }#NEW(1)
+    | t=<IDENTIFIER> open=<ROUNDBRACKETOPEN> close=<ROUNDBRACKETCLOSED>
+    {
+      jjtThis.symbol = t.image;
+      jjtThis.line = t.beginLine;
+      jjtThis.column = t.beginColumn;
+    }#NEW
+    )
+    | Expr6()
+    | <ROUNDBRACKETOPEN> Expression() <ROUNDBRACKETCLOSED>
+}

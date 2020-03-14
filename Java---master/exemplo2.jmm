@@ -1,0 +1,24 @@
+class Haha {
+  public static void main(String [] args){
+    int l;
+    boolean nuno;
+    l = 2;
+    nuno = false;
+    l = 2+4+3*(4/2);
+  }
+
+  public int callMe(int x) {
+      return 2;
+  }
+
+  public boolean coisas() {
+    int[] a;
+    int b;
+
+    //a[0] = 2;
+
+    //b = a[0];
+
+    return true;
+  }
+}

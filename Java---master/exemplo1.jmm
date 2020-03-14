@@ -1,0 +1,64 @@
+class Item {
+  int k;
+  boolean l;
+
+  public static void main(String [] args){
+    int i;
+    int conta;
+    boolean j;
+    Item item;  
+
+    //i = true;
+
+    if (j) {
+      item.nuno();
+    }
+
+    if (i) {
+      j = false;
+    }
+
+    k = 2;
+    i = 2 + conta;
+  }
+
+  public int f1(int arg1, boolean arg2, int arg3) {
+    int i;
+    boolean i;
+    //Haha haha;
+
+    i = 2;
+
+    return 1;
+  }
+
+  public boolean cenas() {
+    boolean oi;
+    Haha haha;
+    int i;
+
+    haha = new Haha();
+
+    haha.callMe(oi);
+    haha.callMe(i);
+    haha.callMe(oi, oi);
+    oi = true;
+
+    return l;
+  }
+
+  public Haha ardeu() {
+    Haha haha;
+    int i;
+
+    if (true + 3) {
+      i = i + 1;
+    }
+
+    while (i) {
+      i = i + 1;
+    }
+
+    return haha;
+  }
+}
